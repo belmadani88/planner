@@ -140,8 +140,8 @@ export function buildSoftwarePlan(
           why: 'Housecall Pro covers the same ground as Jobber with slightly different strengths (customer communication, consumer financing). Pricing is close — trial both and pick by feel, not by feature list.',
           status: 'optional',
           essential: false,
-          monthlyCostEstimate: 49,
-          costNote: 'Basic plans commonly reported around $49–$59/mo — verify current pricing on housecallpro.com/pricing.',
+          monthlyCostEstimate: 59,
+          costNote: 'US pricing (USD): Basic $59/mo billed annually or $79/mo month-to-month, 1 user included (verified 2026-10-30 on housecallpro.com/pricing; subject to change). The $59 rate requires annual billing.',
           caveats: 'Do not buy both — pick one field-service hub.'
         })
       )

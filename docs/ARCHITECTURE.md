@@ -12,7 +12,8 @@ The Phase-1 architecture document: product structure, core models and design dec
 | Validation | `src/schemas` | Zod schemas — answers validated against the question bank; AI output validated + sanitized + software-screened |
 | AI layer (server) | `src/server/gemini.ts` + `functions/api/generate.ts` | Gemini REST call with structured output, model fallback chain, timeout, validation, honest degradation |
 | Report UI | `src/components/report` | 12-section blueprint, interactive React Flow diagram, print/PDF, offline HTML export |
-| Conversion | `src/components/ConsultationForm.tsx` + `functions/api/consultation.ts` | Consented lead capture with D1 (optional) and an honest email fallback |
+| Conversion | `src/components/ConsultationForm.tsx` + `functions/api/consultation.ts` | Consented lead capture with D1 (optional), an optional operator webhook (`src/server/notify.ts`) and honest stored/notified reporting |
+| Privacy | `privacy.html` → `src/components/PrivacyPage.tsx` | Public `/privacy` policy page built as a second Vite entry; content asserted against the real data flow by tests |
 
 ## 2. The universal operating model (the intellectual core)
 
@@ -39,13 +40,14 @@ Identical answers always produce an identical blueprint (covered by a determinis
 - Gemini is called via the official REST API (`generateContent`) with `responseMimeType: application/json` + a response schema, low temperature, 30s timeout, `x-goog-api-key` header (key never in URLs, logs or the browser).
 - Model handling: `GEMINI_MODEL` first, then the `GEMINI_FALLBACK_MODELS` chain on `MODEL_NOT_FOUND` — so a renamed/unavailable model degrades instead of breaking.
 - Validation engine (in order): JSON parse → Zod schema (lengths, stage ids 1–11, required fields) → markdown stripping → **software screening**: any product name outside the knowledge base fails validation and the whole AI payload is discarded.
-- On any failure the server returns HTTP 200 with the deterministic blueprint plus an honest notice (`QUOTA`, `MODEL_NOT_FOUND`, `INVALID_AI_RESPONSE`, …). The UI never shows a broken state.
+- On any failure the server returns HTTP 200 with the deterministic blueprint plus an honest notice (`QUOTA`, `MODEL_NOT_FOUND`, `INVALID_AI_RESPONSE`, …). Since v1.0.1 the notice travels both as a top-level field and inside `blueprint.meta.notice`, so the report view actually displays it (v1.0.0 computed it but dropped it en route to the UI). The UI never shows a broken state.
 - The AI writes only: executive summary, per-stage insights + tips, contextual notes, roadmap narrative, improvement narrative, consultation message. It cannot change recommendations, software, numbers or structure.
 
 ## 5. Frontend architecture
 
 - **React 18 + TypeScript + Vite + Tailwind CSS 3**, no UI framework — a small local design system (`src/components/ui.tsx`) encodes the WebThangs visual language (actor chips, severity chips, maturity meters, section titles).
-- **State**: a 4-view state machine (landing → quiz → analyzing → blueprint). No router — the product is a linear journey; answers persist in `localStorage`.
+- **State**: a 4-view state machine (landing → quiz → analyzing → blueprint). No router — the product is a linear journey; answers persist in `localStorage`. The `/privacy` page is a separate static entry, deliberately outside the SPA.
+- **Industry switching (v1.0.1)**: changing trade drops service selections that don't exist in the new industry's option set (shared values survive), and the engine re-sanitizes on every build — stale selections can never reach an assessment.
 - **Diagram**: `@xyflow/react` (React Flow 12) with a custom node component; opens at readable zoom and pans/zooms from there. Node color encodes actor type; the legend and node inspector teach the “human vs automation vs AI vs software” distinction.
 - **Export**: `window.print()` with a dedicated print stylesheet; plus a self-contained offline HTML document and raw JSON (`src/lib/exportHtml.ts`).
 - **Performance**: single bundle ≈ 188 kB gzipped (React Flow + icons included); static assets immutable-hashed; no client-side API key or external runtime dependencies.

@@ -79,7 +79,11 @@ export function ConsultationForm({ blueprint }: { blueprint: Blueprint }) {
     ]
       .filter(Boolean)
       .join('\n')
-    const to = contactEmail ?? 'hello@webthangs.example'
+    // v1.0.1 (audit P0.1): never display an invented development address. When
+    // the server has no CONTACT_EMAIL configured, the UI says so honestly
+    // instead of showing a placeholder address that belongs to nobody.
+    const to = contactEmail
+    if (!to) return null
     return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
@@ -104,25 +108,33 @@ export function ConsultationForm({ blueprint }: { blueprint: Blueprint }) {
         <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5">
           <p className="text-sm font-semibold text-amber-900">Almost there — one more click</p>
           <p className="mt-1.5 text-sm leading-relaxed text-amber-900/80">{resultMessage}</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <a href={mailtoHref()} className="btn-primary !bg-amber-600 hover:!bg-amber-700">
-              <Mail className="h-4 w-4" /> Open a pre-filled email
-            </a>
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                navigator.clipboard?.writeText(
-                  `Consultation request\nName: ${name}\nEmail: ${email}\nIndustry: ${context.industry}\nSize: ${context.sizeTier}\nGoals: ${context.goals.join(', ')}\nTop findings: ${context.topFindings.join(' | ')}`
-                )
-                setCopied(true)
-                setTimeout(() => setCopied(false), 2000)
-              }}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'Copied' : 'Copy my summary'}
-            </button>
-          </div>
+          {mailtoHref() ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a href={mailtoHref()!} className="btn-primary !bg-amber-600 hover:!bg-amber-700">
+                <Mail className="h-4 w-4" /> Open a pre-filled email
+              </a>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    `Consultation request\nName: ${name}\nEmail: ${email}\nIndustry: ${context.industry}\nSize: ${context.sizeTier}\nGoals: ${context.goals.join(', ')}\nTop findings: ${context.topFindings.join(' | ')}`
+                  )
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 2000)
+                }}
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'Copied' : 'Copy my summary'}
+              </button>
+            </div>
+          ) : (
+            <p className="mt-4 text-xs font-semibold leading-relaxed text-amber-800">
+              This deployment has no contact email configured yet, so we cannot offer an email link either. That is a
+              launch-blocking configuration gap on the operator side — please try again later.
+            </p>
+          )}
           <p className="mt-3 text-xs text-amber-800/70">
-            We never pretend a request was stored when it wasn’t — this deployment has no request database, so email is the honest path.
+            We never pretend a request was stored when it wasn’t — this deployment has no request database, so email is
+            the honest path.
           </p>
         </div>
       ) : (
@@ -177,9 +189,14 @@ export function ConsultationForm({ blueprint }: { blueprint: Blueprint }) {
               className="mt-0.5 h-4 w-4 shrink-0 accent-brand-700"
             />
             <span className="text-xs leading-relaxed text-ink/60">
-              I agree that WebThangs may contact me about this request using the details above. My blueprint answers and
-              this message are used only to prepare the consultation — never sold, never shared, and I can ask for
-              deletion at any time. *
+              I agree that WebThangs may contact me about this request using the details above. My request details are
+              used only to prepare for and follow up on this consultation. I understand that my questionnaire answers
+              were processed as described in the{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 underline hover:text-brand-800">
+                Privacy Policy
+              </a>{' '}
+              (including Google Gemini processing if I opted in to AI personalization), and that this request is stored
+              in WebThangs’ request database when one is configured. *
             </span>
           </label>
 

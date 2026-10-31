@@ -8,7 +8,7 @@
 
 import type { IndustryId, GoalId } from './answers'
 
-export const ENGINE_VERSION = '1.0.0'
+export const ENGINE_VERSION = '1.0.1'
 
 export type ActorKind = 'human' | 'automation' | 'ai' | 'software'
 
@@ -16,6 +16,7 @@ export interface BlueprintNotice {
   code:
     | 'NO_API_KEY'
     | 'AI_DISABLED'
+    | 'AI_DECLINED'
     | 'QUOTA'
     | 'MODEL_NOT_FOUND'
     | 'INVALID_AI_RESPONSE'
@@ -201,6 +202,8 @@ export interface FinancialInputs {
   monthlyAdSpend: number | null
   annualRevenue: number | null
   missedCallRate: number | null
+  /** Modeled telephone share of ALL inquiries (v1.0.1) — stated, not measured. */
+  phoneShareOfInquiries: number
   inputsAreMidpoints: boolean
 }
 

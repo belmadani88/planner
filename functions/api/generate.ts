@@ -1,24 +1,31 @@
 /**
- * POST /api/generate — the AI personalization endpoint.
+ * POST /api/generate — the blueprint generation endpoint.
  *
  * Flow:
- *  1. Rate limit + body size limits.
- *  2. Zod-validate the questionnaire answers against the question bank.
+ *  1. Rate limit + body size limits (best-effort per-isolate; a Cloudflare WAF
+ *     rate-limiting rule on /api/* is REQUIRED for a global guarantee — see
+ *     docs/DEPLOYMENT.md "Hardening").
+ *  2. Zod-validate the questionnaire answers against the question bank and
+ *     strip industry-specific selections that do not belong to the chosen
+ *     industry (stale state can never poison the assessment).
  *  3. Rebuild the deterministic blueprint SERVER-SIDE (single source of truth;
  *     the client's copy can never inject content).
- *  4. If no GEMINI_API_KEY / AI disabled → return the deterministic blueprint
- *     with an honest notice.
- *  5. Otherwise call Gemini (structured output), validate + sanitize, merge.
- *  6. On ANY AI failure → deterministic blueprint + honest notice. The app
+ *  4. If the visitor declined AI personalization (body.ai === false), no data
+ *     is forwarded to Google Gemini — the deterministic blueprint is returned
+ *     with an honest AI_DECLINED notice.
+ *  5. If no GEMINI_API_KEY / AI disabled → deterministic blueprint + honest
+ *     notice.
+ *  6. Otherwise call Gemini (structured output), validate + sanitize, merge.
+ *  7. On ANY AI failure → deterministic blueprint + honest notice. The app
  *     never breaks because of the AI.
  *
  * API keys live only in server-side env — never in the browser.
  */
 
 import type { Answers } from '../../src/types/answers'
-import { AnswersSchema, checkCompleteness } from '../../src/schemas/answers'
+import { AnswersSchema, checkCompleteness, sanitizeServicesForIndustry } from '../../src/schemas/answers'
 import { buildDeterministicBlueprint } from '../../src/engine'
-import { generatePersonalization, GeminiError, geminiNotice } from '../../src/server/gemini'
+import { generatePersonalization, GeminiError, geminiNotice, AI_DECLINED_NOTICE } from '../../src/server/gemini'
 import { rateLimit, clientKey } from '../../src/server/ratelimit'
 import { json, errorJson, readJsonBody } from '../../src/server/respond'
 
@@ -28,6 +35,12 @@ interface Env {
   GEMINI_FALLBACK_MODELS?: string
   AI_ENABLED?: string
 }
+
+/* Minimal structural types so this file type-checks in both the Workers and
+   the DOM type worlds (the ambient PagesFunction global only exists in the
+   Workers config). Runtime behavior is identical — Cloudflare passes the same
+   context object. */
+type PagesFunction<E> = (ctx: { request: Request; env: E }) => Promise<Response> | Response
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   /* 1. Rate limit: 8 generations per hour per IP (best-effort, per-isolate). */
@@ -56,7 +69,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       400
     )
   }
-  const answers = answersResult.data as Answers
+
+  /* v1.0.1: drop industry-specific answers that don't belong to the chosen
+     industry (e.g. stale HVAC service selections after switching to plumbing).
+     Shared answers that are valid in the new industry are preserved. */
+  const answers = sanitizeServicesForIndustry(answersResult.data as Answers) as Answers
 
   const missing = checkCompleteness(answers)
   if (missing.length > 0) {
@@ -66,19 +83,33 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   /* 3. Deterministic blueprint (always computed server-side). */
   const blueprint = buildDeterministicBlueprint(answers)
 
-  /* 4. AI optional and fail-safe. */
-  const aiDisabled = (env.AI_ENABLED ?? 'on').toLowerCase() === 'off'
-  if (!env.GEMINI_API_KEY || aiDisabled) {
+  /* 4. The visitor's explicit choice comes first: declined = no Gemini call,
+        no questionnaire data forwarded to Google, full blueprint intact. */
+  if (body.ai === false) {
     return json({
       ok: true,
-      blueprint,
+      blueprint: { ...blueprint, meta: { ...blueprint.meta, notice: AI_DECLINED_NOTICE } },
       ai: null,
-      notice: {
-        code: !env.GEMINI_API_KEY ? 'NO_API_KEY' : 'AI_DISABLED',
-        message: !env.GEMINI_API_KEY
-          ? 'AI personalization is not configured on this deployment. Your complete blueprint is shown in its standard form.'
-          : 'AI personalization is disabled on this deployment. Your complete blueprint is shown in its standard form.'
-      }
+      notice: AI_DECLINED_NOTICE
+    })
+  }
+
+  /* 5. AI optional and fail-safe. The notice travels BOTH as a top-level
+        field and inside blueprint.meta.notice, so the report view can show it
+        (v1.0.0 computed it but the report never displayed it). */
+  const aiDisabled = (env.AI_ENABLED ?? 'on').toLowerCase() === 'off'
+  if (!env.GEMINI_API_KEY || aiDisabled) {
+    const notice = {
+      code: (!env.GEMINI_API_KEY ? 'NO_API_KEY' : 'AI_DISABLED') as 'NO_API_KEY' | 'AI_DISABLED',
+      message: !env.GEMINI_API_KEY
+        ? 'AI personalization is not configured on this deployment. Your complete blueprint is shown in its standard form.'
+        : 'AI personalization is disabled on this deployment. Your complete blueprint is shown in its standard form.'
+    }
+    return json({
+      ok: true,
+      blueprint: { ...blueprint, meta: { ...blueprint.meta, notice } },
+      ai: null,
+      notice
     })
   }
 
@@ -96,11 +127,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     })
   } catch (e) {
     const err = e instanceof GeminiError ? e : new GeminiError('AI_ERROR', String(e))
+    const notice = geminiNotice(err)
     return json({
       ok: true,
-      blueprint,
+      blueprint: { ...blueprint, meta: { ...blueprint.meta, notice } },
       ai: null,
-      notice: geminiNotice(err)
+      notice
     })
   }
 }

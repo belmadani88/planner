@@ -1,8 +1,25 @@
 # Testing
 
-## Automated suite — `npm test` (vitest, 69 tests)
+## Automated suite — `npm test` (vitest, 151 tests)
 
-Run status for this delivery: **69/69 passing** (`vitest run`), TypeScript clean for both app and Functions configs, production build clean.
+Run status for the v1.0.1 delivery: **151/151 passing** (`vitest run`),
+`npm run typecheck` clean for both app and Functions configs, production
+build clean, `dist/privacy.html` emitted and verified.
+
+### v1.0.1 additions (82 new tests)
+
+| Suite | Count | Covers |
+| --- | --- | --- |
+| `tests/privacy.test.ts` | 14 | Disclosures match the actual data flow (the misleading v1.0.0 phrases are asserted GONE); /privacy page exists in source AND in `dist/`; the policy contains every required disclosure and no invented retention/compliance/address; client short-circuits before any fetch when AI is declined |
+| `tests/gemini.test.ts` | 19 | All required AI failure conditions (no key, invalid key, 429, network, timeout, malformed, invalid JSON, schema failure, unsupported model + fallback chain, declined AI, unsupported software claims, valid merge, 400s, GET 405) — every failure returns the complete deterministic blueprint |
+| `tests/consultation.test.ts` | 14 | All seven required conditions: D1 unavailable; D1+insert OK (webhook unset); D1 insert failure; webhook success; webhook failure after insert; webhook network error; invalid payload — plus stored/notified distinction, payload minimality, GET 405, no-leak failure details |
+| `tests/regressions.test.ts` | 22 | Duplicate option-ID detection (static + per-industry); cross-industry label corruption fix; CRM label fix (GHL, HubSpot, FSM-only, none, multiple tools, empty values); industry-switch cases (hvac→plumbing, plumbing→roofing, electrical→landscaping, remodeling↔landscaping, shared answers preserved, engine-level stale guard); Housecall Pro pricing metadata; 12-section export; diagram connectivity |
+| `tests/financial.test.ts` (delta) | +17 | Phone-share scoping (mostly-phone / mixed / mostly-web / unknown), open-ended ranges (100+, $5,000+) with stated modeling values, zero ad spend, near-zero inquiries, incomplete answers, prefer-not revenue, assumption constants |
+
+The 69 original tests are all preserved. The financial expectations inside
+them were updated to the corrected phone-share math (e.g. the plumbing
+fixture's missed-call estimate is 38 × 0.85 × 0.5 ≈ 16, not 19) — the change
+is documented in CHANGELOG.md and recomputed independently in the tests.
 
 ### The seven required business scenarios (Part 14)
 
@@ -41,6 +58,18 @@ Cross-cutting invariants: all 11 stages present; blueprint passes the structural
 - No website → WordPress recommended, form-capture correctly skipped, phone-first diagram built
 - GoHighLevel without FSM → GHL kept as lead layer + FSM added + **unverified** integration note stated honestly
 
+### NOT VERIFIED in the v1.0.1 environment
+
+- **Live Gemini call** — no usable API key was available in the remediation
+  sandbox; fabricating one is forbidden by the engagement rules. All
+  surrounding behavior is stub-tested; the first deploy with a real key must
+  confirm the "Personalized with <model>" banner.
+- **Live Cloudflare D1 round-trip** — no Cloudflare account was available;
+  D1 behavior is covered by a structural fake in tests and must be confirmed
+  on the real binding after deployment.
+- **Real-domain WAF rate limiting** — a zone-level dashboard configuration;
+  cannot be exercised from a sandbox. Documented in DEPLOYMENT.md.
+
 ## Manual / browser test results (this delivery)
 
 Executed against the production build via an automated headless browser, then re-verified visually:
@@ -58,6 +87,8 @@ Executed against the production build via an automated headless browser, then re
 | Consultation form: validation, consent required, submit with no backend → honest fallback (pre-filled email + copy summary), never fake success | ✅ |
 | Visual QA (screenshots reviewed by a vision model): landing strip clipping and diagram legibility flagged → both fixed and re-verified **PASS** | ✅ |
 | Print/PDF: dedicated print stylesheet (`.no-print` chrome hidden, cards avoid page breaks) + offline HTML export | ✅ code-verified |
+| v1.0.1: privacy notice + AI opt-in checkbox render on the final question screen; declining AI produces the standard-edition notice and zero API calls | ✅ |
+| v1.0.1: /privacy page serves from the production build (dist/privacy.html + hashed chunk verified) | ✅ |
 | Mobile layout (390px): hero, quiz cards, report sections responsive | ✅ |
 
 ### Manual checklist for future changes

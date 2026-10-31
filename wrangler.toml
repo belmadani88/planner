@@ -7,6 +7,9 @@ compatibility_date = "2026-10-01"
 pages_build_output_dir = "dist"
 
 # ── Optional: consultation-request storage with Cloudflare D1 (free tier) ────
+#
+# When D1 is bound, set LEAD_WEBHOOK_URL in the Pages environment (or .dev.vars)
+# so stored requests trigger an operator notification. See docs/DEPLOYMENT.md.
 # 1. Create the database:
 #      npx wrangler d1 create webthangs_consultations
 # 2. Uncomment the block below and paste the database_id from the command output.

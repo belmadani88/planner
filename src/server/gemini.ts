@@ -197,7 +197,12 @@ export async function generatePersonalization(
 ): Promise<GeminiResult> {
   const apiKey = env.GEMINI_API_KEY!
   const primary = env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash'
-  const fallbacks = (env.GEMINI_FALLBACK_MODELS ?? 'gemini-flash-latest,gemini-2.5-flash')
+  // v1.0.1: default fallback chain verified against ai.google.dev/gemini-api/docs/models
+  // (Oct 2026). `gemini-flash-latest` is a maintained alias; `gemini-3.6-flash` is a
+  // stable Flash-generation model. `gemini-2.5-flash` was dropped from the defaults
+  // because Google lists it as limited-access for API projects that have not used it
+  // before — a brand-new key could not fall back to it. Overridable via env.
+  const fallbacks = (env.GEMINI_FALLBACK_MODELS ?? 'gemini-flash-latest,gemini-3.6-flash')
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
@@ -232,3 +237,10 @@ export function geminiNotice(e: GeminiError): { code: string; message: string } 
   }
   return { code: e.code, message: messages[e.code] }
 }
+
+/** Notice used when the visitor explicitly declined optional AI personalization. */
+export const AI_DECLINED_NOTICE = {
+  code: 'AI_DECLINED',
+  message:
+    'You chose the standard blueprint, so no AI-written personalization was used and your answers were not sent to Google Gemini. Every recommendation, number and diagram below comes from the deterministic engine.'
+} as const

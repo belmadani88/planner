@@ -20,6 +20,7 @@ import { buildFinancials } from './financial'
 import { buildRoadmap, buildImplementationPlan, buildImprovements } from './roadmap'
 import { buildOperatingModel, buildDiagram } from './model'
 import { labelOf, joinList } from './labels'
+import { sanitizeServicesForIndustry } from '../schemas/answers'
 
 const ACTOR_LEGEND = [
   { kind: 'human' as const, label: 'Human-controlled', hint: 'Judgment, relationships, pricing, safety — done by people, always.' },
@@ -28,7 +29,11 @@ const ACTOR_LEGEND = [
   { kind: 'software' as const, label: 'Software system', hint: 'The systems of record: CRM, scheduling, accounting — where information lives.' }
 ]
 
-export function buildDeterministicBlueprint(answers: Answers): Blueprint {
+export function buildDeterministicBlueprint(answersInput: Answers): Blueprint {
+  /* v1.0.1 (audit Part 4 #3): whatever the entry point (quiz, API, demo),
+     industry-specific selections that don't belong to the chosen industry can
+     never reach the assessment. Shared answers are preserved. */
+  const answers = sanitizeServicesForIndustry(answersInput) as Answers
   const industry = INDUSTRIES_BY_ID[answers.industry]
   const classification = classifyBusiness(answers)
   const stageAssessments = assessStages(answers)
@@ -100,10 +105,13 @@ export function buildDeterministicBlueprint(answers: Answers): Blueprint {
   } else {
     assumed.push(`Revenue was given as a range (${labelOf('revenue', answers)}); scenarios use the midpoint of that range.`)
   }
-  if (answers.monthlyInquiries === 'not-sure' || answers.monthlyAdSpend === 'not-sure') {
-    assumed.push('Some acquisition numbers were marked “I don’t know” — cost-per-lead math is skipped rather than guessed.')
+  // v1.0.1: also covers missing (undefined) answers, not just "I don't know".
+  const inquiriesUnknown = answers.monthlyInquiries === 'not-sure' || answers.monthlyInquiries === undefined
+  const adSpendUnknown = answers.monthlyAdSpend === 'not-sure' || answers.monthlyAdSpend === undefined
+  if (inquiriesUnknown || adSpendUnknown) {
+    assumed.push('Some acquisition numbers were not provided — cost-per-lead math is skipped rather than guessed.')
   }
-  if (answers.missedCalls === 'not-sure') {
+  if (answers.missedCalls === 'not-sure' || answers.missedCalls === undefined) {
     assumed.push('Missed-call rate unknown — recovery scenarios are skipped.')
   }
   assumed.push('Conversion and recovery rates used in scenarios are stated assumptions, not industry benchmarks — see Section 10.')

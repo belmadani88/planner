@@ -57,7 +57,7 @@ export function Landing({
 
           <div className="mt-16 max-w-3xl animate-fade-up md:mt-20">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-300">
-              For home-services businesses
+              For US home-services businesses
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-[1.08] tracking-tight md:text-[54px]">
               See how your business <span className="text-brand-300">should run</span> — in one afternoon read.
@@ -81,7 +81,8 @@ export function Landing({
               )}
             </div>
             <p className="mt-4 text-xs text-white/40">
-              Takes about 6 minutes · Your answers stay in your browser · Nothing is submitted without your permission
+              Takes about 6 minutes · Answers are saved in your browser and submitted for processing when you build your
+              blueprint · <a href="/privacy" className="underline hover:text-white/70">Privacy Policy</a>
             </p>
           </div>
         </div>
@@ -245,7 +246,10 @@ export function Landing({
           >
             Start my free blueprint <ArrowRight className="h-4 w-4" />
           </button>
-          <p className="mt-3 text-xs text-white/40">6 minutes · no account · your answers stay in your browser</p>
+          <p className="mt-3 text-xs text-white/40">
+            6 minutes · no account · built for US home-services businesses ·{' '}
+            <a href="/privacy" className="underline hover:text-white/70">Privacy Policy</a>
+          </p>
         </div>
       </section>
     </div>

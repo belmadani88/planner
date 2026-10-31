@@ -47,13 +47,19 @@ export default function App() {
     setView('quiz')
   }
 
-  const runGeneration = async (finalAnswers: Answers) => {
+  const runGeneration = async (finalAnswers: Answers, allowAi: boolean) => {
     setView('analyzing')
     persist(finalAnswers)
-    const outcome = await generateBlueprint(finalAnswers)
+    const outcome = await generateBlueprint(finalAnswers, { aiPersonalization: allowAi })
     // Small delay so the staged status feels deliberate (the work is real).
     await new Promise((r) => setTimeout(r, 900))
-    setBlueprint(outcome.blueprint)
+    // v1.0.1 fix: surface the server's honest notice (AI unavailable, declined,
+    // etc.) inside the report. v1.0.0 computed this notice but never showed it.
+    if (outcome.notice && !outcome.blueprint.meta.notice) {
+      setBlueprint({ ...outcome.blueprint, meta: { ...outcome.blueprint.meta, notice: outcome.notice } })
+    } else {
+      setBlueprint(outcome.blueprint)
+    }
     setView('blueprint')
     window.scrollTo(0, 0)
   }
@@ -117,7 +123,12 @@ function Analyzing() {
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600" />
       </div>
       <h1 className="text-xl font-bold text-brand-900">Building your operations blueprint…</h1>
-      <p className="mt-2 text-sm text-ink/60">This takes a few seconds. Everything stays on this page.</p>
+      <p className="mt-2 text-sm text-ink/60">This takes a few seconds.</p>
+      <p className="mt-1 max-w-md text-xs leading-relaxed text-ink/45">
+        Your answers are being processed to build your blueprint. If you chose AI personalization, they are also
+        processed by Google’s Gemini — see our <a href="/privacy" className="underline hover:text-brand-700">Privacy
+        Policy</a> for exactly what is sent and why.
+      </p>
       <ol className="mt-8 w-full space-y-2.5 text-left">
         {steps.map((s, i) => (
           <li
@@ -150,8 +161,10 @@ function Footer() {
     <footer className="no-print border-t border-brand-100 bg-white">
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 px-6 py-6 text-xs text-ink/50 sm:flex-row sm:items-center">
         <p>
-          WebThangs Business Operations Planner — a free resource for home-services businesses.
-          Answers stay in your browser; nothing is submitted unless you ask for a consultation.
+          WebThangs Business Operations Planner — a free resource for US home-services businesses. Your answers are
+          saved in your browser; they are submitted for processing when you generate your blueprint (and, if you opt
+          in, processed by Google Gemini). See our{' '}
+          <a href="/privacy" className="font-semibold text-brand-700 underline hover:text-brand-800">Privacy Policy</a>.
         </p>
         <p className="shrink-0">Blueprints are informational — not financial advice or guaranteed results.</p>
       </div>

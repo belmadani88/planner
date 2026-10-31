@@ -99,3 +99,24 @@ export function checkCompleteness(a: PartialAnswers): string[] {
   }
   return missing
 }
+
+/**
+ * v1.0.1 (audit Part 4 #3): when the owner switches industry, industry-specific
+ * selections (the `services` list) must not leak into the new industry's
+ * assessment. Returns a copy of the answers with `services` reduced to values
+ * that exist in the NEW industry's option set. Shared values that legitimately
+ * exist in both trades (e.g. 'design-build' for remodeling ↔ landscaping) are
+ * preserved; everything else is dropped so the question is asked again.
+ * All unrelated answers pass through untouched.
+ */
+export function sanitizeServicesForIndustry(a: PartialAnswers): PartialAnswers {
+  const industry = a.industry
+  if (!industry || !Array.isArray(a.services)) return a
+  const servicesQ = QUESTIONS.find((q) => q.id === 'services')
+  if (!servicesQ) return a
+  const allowed = new Set(resolveOptions(servicesQ, { industry }).map((o) => o.value))
+  const kept = a.services.filter((v) => allowed.has(v))
+  const next: PartialAnswers = { ...a, services: kept }
+  if (kept.length === 0) delete (next as Record<string, unknown>).services
+  return next
+}

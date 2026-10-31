@@ -97,12 +97,12 @@ export const SOFTWARE: SoftwareEntry[] = [
     ],
     website: 'https://housecallpro.com',
     pricing: {
-      model: 'Per plan / per team, tiered',
-      from: 49,
-      note: 'Basic plans commonly reported around $49–$59/mo and higher tiers (Essential and up) around $149+/mo; team pricing scales with users. Verified Oct 2026 via published pricing summaries — confirm current pricing on housecallpro.com/pricing.'
+      model: 'Per plan / per team, tiered (US pricing, USD)',
+      from: 59,
+      note: 'US pricing (USD), verified 2026-10-30 on housecallpro.com/pricing: Basic $59/mo billed annually or $79/mo billed month-to-month (1 user included); Essentials $149/mo annual / $189/mo monthly (5 users); Max $299/mo annual / $329/mo monthly (8 users, ~$35/mo per extra user). The $59 entry price requires ANNUAL billing — month-to-month is $79. Pricing is subject to change; confirm on housecallpro.com/pricing before purchase.'
     },
-    lastVerified: '2026-10-31',
-    verifiedVia: 'housecallpro.com/pricing and 2026 pricing summaries'
+    lastVerified: '2026-10-30',
+    verifiedVia: 'housecallpro.com/pricing (verified 2026-10-30)'
   },
   {
     id: 'servicetitan',
@@ -157,7 +157,7 @@ export const SOFTWARE: SoftwareEntry[] = [
     pricing: {
       model: 'Flat monthly subscription',
       from: 97,
-      note: 'Starter $97/mo, Unlimited $297/mo (verified Oct 2026 on gohighlevel.com/pricing).'
+      note: 'Starter $97/mo, Unlimited $297/mo (verified Oct 2026 on gohighlevel.com/pricing). Pricing changes often — verify current pricing on gohighlevel.com/pricing before purchase.'
     },
     lastVerified: '2026-10-31',
     verifiedVia: 'gohighlevel.com/pricing'

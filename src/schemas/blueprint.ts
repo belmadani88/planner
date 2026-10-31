@@ -206,6 +206,7 @@ export const BlueprintSchema = z.object({
       monthlyAdSpend: z.number().nullable(),
       annualRevenue: z.number().nullable(),
       missedCallRate: z.number().nullable(),
+      phoneShareOfInquiries: z.number().min(0).max(1),
       inputsAreMidpoints: z.boolean()
     }),
     measured: z.array(z.object({}).passthrough()),

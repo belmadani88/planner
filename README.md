@@ -1,6 +1,6 @@
 # WebThangs Business Operations Planner
 
-A free, interactive business-intelligence platform for home-services companies (HVAC, plumbing, roofing, electrical, water-damage restoration, remodeling, landscaping). A business owner answers ~35 plain-language questions about their company and receives a **personalized business operations blueprint**: how their business runs today, where it leaks, how it should work, which software fits, where automation and AI genuinely help, what stays human — and exactly what to do first.
+A free, interactive business-intelligence platform for **US** home-services companies (HVAC, plumbing, roofing, electrical, water-damage restoration, remodeling, landscaping). A business owner answers 37 plain-language questions about their company and receives a **personalized business operations blueprint**: how their business runs today, where it leaks, how it should work, which software fits, where automation and AI genuinely help, what stays human — and exactly what to do first.
 
 It is **not** an AI chatbot, a website builder or a revenue calculator. It is a deterministic home-services business-intelligence engine with an optional AI explanation layer, wrapped in a conversion path for WebThangs (a digital systems implementation agency).
 
@@ -26,7 +26,7 @@ Other commands:
 | --- | --- |
 | `npm run build` | Type-checks the app and produces the static site in `dist/` |
 | `npm run typecheck` | Type-checks app **and** Cloudflare Functions code |
-| `npm test` | Runs the vitest suite (69 tests: 7 business scenarios, financial math, validation engine, edge cases) |
+| `npm test` | Runs the vitest suite (151 tests: 7 business scenarios, financial math, validation engine, edge cases, privacy flow, Gemini failure modes, consultation handling, v1.0.1 regressions) |
 | `npm run preview` | Serves the production build locally |
 | `npm run deploy` | Builds and deploys to Cloudflare Pages via wrangler |
 
@@ -69,7 +69,7 @@ Visitor → Landing → Guided questionnaire (6 parts, ~6 min, autosaved locally
         print/PDF, offline HTML export, consultation CTA
 ```
 
-**Business logic before AI.** Gemini only writes narrative text inside a validated schema. It cannot choose software, invent workflows or prices — every recommendation, number and integration claim comes from the deterministic engine and the software knowledge base, both of which are code.
+**Business logic before AI.** Gemini only writes narrative text inside a validated schema. It cannot choose software, invent workflows or prices — every recommendation, number and integration claim comes from the deterministic engine and the software knowledge base, both of which are code. **Since v1.0.1, AI personalization is opt-in**: visitors tick an explicit checkbox (off by default) before any answer is forwarded to Google Gemini, and declining still yields the complete deterministic blueprint.
 
 **Static-first.** The frontend is a fully static SPA. Even with *zero* Functions deployed, the complete deterministic blueprint works. The Functions only add AI personalization and (optional) consultation storage.
 
@@ -86,16 +86,20 @@ Visitor → Landing → Guided questionnaire (6 parts, ~6 min, autosaved locally
 │   ├── types/                Answers + Blueprint contracts
 │   ├── schemas/              Zod: answers (derived from question bank), blueprint, personalization
 │   ├── data/                 industries (7 configs) · questions (37, conditional)
-│   │                         stages (the 11-stage model) · software KB (15 entries, verified Oct 2026)
+│   │                         stages (the 11-stage model) · software KB (15 entries, HCP verified 2026-10-30)
 │   │                         workflows (27-recommendation library) · demoScenarios (7 fixtures)
+│   ├── components/PrivacyPage.tsx   the public /privacy page (built from privacy.html)
 │   ├── engine/               deterministic engine: classify → stages → findings → workflows
 │   │                         → software → financials → roadmap → model → diagram → index
 │   ├── server/               isomorphic helpers: Gemini REST client, rate limiter, responses
 │   ├── lib/                  client API layer, localStorage, HTML/JSON export
 │   └── components/           Landing · Quiz · BlueprintView (12 sections) · FlowDiagram (React Flow)
 │                             · ConsultationForm · ui primitives
-├── tests/                    vitest: engine, financial math, validation, edge cases
-├── docs/                     ARCHITECTURE · DEPLOYMENT · TESTING · KNOWN-LIMITATIONS · PRIVACY
+├── tests/                    vitest: engine, financial, validation, edge, privacy,
+│                             gemini failure modes, consultation, v1.0.1 regressions
+├── docs/                     ARCHITECTURE · DEPLOYMENT · TESTING · LIMITATIONS · PRIVACY
+├── CHANGELOG.md              full v1.0.1 remediation record
+├── privacy.html              second build entry → served at /privacy
 ├── wrangler.toml             Cloudflare Pages config (incl. optional D1 binding)
 ├── .env.example / .dev.vars.example   placeholders only — never real secrets
 └── index.html / vite.config.ts / tailwind.config.js / tsconfig*.json
@@ -113,7 +117,8 @@ All configuration is server-side environment variables (see `.env.example`):
 | `GEMINI_MODEL` | Primary model. `gemini-3.8-flash` is the current Flash generation (verified Oct 2026). | `gemini-3.8-flash` |
 | `GEMINI_FALLBACK_MODELS` | Tried in order if the primary model is unavailable for the key. | `gemini-flash-latest,gemini-2.5-flash` |
 | `AI_ENABLED` | Set `off` to disable AI without removing the key. | `on` |
-| `CONTACT_EMAIL` | Fallback contact shown when no D1 database is configured. | — |
+| `CONTACT_EMAIL` | Operator contact (email fallback + Privacy Policy contact point). **Required before launch** — without it the site shows no contact address anywhere, by design. | — |
+| `LEAD_WEBHOOK_URL` | Optional server-side webhook notified when a consultation request is stored in D1. | — |
 | `DB` (binding) | Optional Cloudflare D1 database for consultation requests. | — |
 
 Never put any of these in client code. The frontend never sees the API key; it only talks to `/api/generate`.
@@ -137,17 +142,17 @@ Free-tier capacity (verified Oct 2026): 100,000 Function requests/day, 500 build
 
 ## Testing
 
-- **Automated**: `npm test` — 69 tests covering the seven required business scenarios, financial math recomputed independently, the validation engine, and edge cases (incomplete questionnaire, “I don’t know” everywhere, no website, GHL-without-FSM, determinism).
+- **Automated**: `npm test` — 151 tests covering the seven required business scenarios, financial math (phone-share corrected) recomputed independently, the validation engine, edge cases, the privacy data flow, every Gemini failure/consent condition, all consultation storage/notification outcomes, and the v1.0.1 regression fixes.
 - **Browser-verified**: landing, questionnaire flow, all 12 blueprint sections, diagram interactivity, consultation fallback, console-error-free. A visual QA pass (screenshots reviewed by a vision model) caught and confirmed fixes for the landing strip clipping and diagram zoom legibility.
 - Details and the manual test checklist: **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## Known limitations
 
-**[docs/KNOWN-LIMITATIONS.md](docs/KNOWN-LIMITATIONS.md)** — including: rate limiting is per-isolate (best-effort), software pricing is point-in-time reference, the AI layer needs a valid key to activate, D1 storage is optional and off by default.
+**[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** — including: rate limiting is per-isolate (global limiting requires a Cloudflare WAF rule the operator must configure), software pricing is a point-in-time US reference, the live Gemini call was NOT VERIFIED in the v1.0.1 remediation (no API key available), consultation notification requires `LEAD_WEBHOOK_URL` or a real retrieval habit, and the Privacy Policy requires legal review.
 
 ## Privacy
 
-**[docs/PRIVACY.md](docs/PRIVACY.md)** — answers never leave the browser unless the visitor requests AI personalization (then: answers → Google Gemini via server, no system of record) or submits a consultation (explicit consent, minimal fields, deletable on request). Template for the agency to publish and adapt.
+The public **Privacy Policy is served at `/privacy`** (source `privacy.html` + `src/components/PrivacyPage.tsx`; repo copy: **[docs/PRIVACY.md](docs/PRIVACY.md)**). It matches the actual data flow: answers are saved in the browser, submitted for processing when the blueprint is generated, forwarded to Google Gemini **only when the visitor opts in**, and consultation requests are stored (D1, optional) with honest stored/notified reporting. The policy is a **draft requiring legal review** before commercial launch, and `CONTACT_EMAIL` is a documented launch blocker.
 
 ## License & brand
 

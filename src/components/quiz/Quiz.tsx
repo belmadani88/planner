@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, HelpCircle, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, HelpCircle, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react'
 import type { AnswerKey, Answers, PartialAnswers } from '../../types/answers'
 import {
   QUESTIONS,
@@ -9,18 +9,23 @@ import {
   type QuestionDef,
   type QuestionOption
 } from '../../data/questions'
-import { checkCompleteness } from '../../schemas/answers'
+import { checkCompleteness, sanitizeServicesForIndustry } from '../../schemas/answers'
 import { Logo } from '../ui'
 
 interface QuizProps {
   initialAnswers: PartialAnswers
   onSave: (a: PartialAnswers) => void
-  onComplete: (a: Answers) => void
+  onComplete: (a: Answers, allowAiPersonalization: boolean) => void
   onExit: () => void
 }
 
 export function Quiz({ initialAnswers, onSave, onComplete, onExit }: QuizProps) {
   const [answers, setAnswers] = useState<PartialAnswers>(initialAnswers)
+  // v1.0.1 (audit P0.1): optional AI personalization is opt-in. The default is
+  // OFF — the deterministic blueprint is the product; Gemini is a garnish the
+  // visitor must actively choose, because it means their answers are processed
+  // by Google.
+  const [allowAi, setAllowAi] = useState(false)
   const [index, setIndex] = useState<number>(() => {
     // Resume at the first unanswered visible question.
     const visible = visibleQuestions(initialAnswers)
@@ -50,9 +55,15 @@ export function Quiz({ initialAnswers, onSave, onComplete, onExit }: QuizProps) 
   }
 
   function update(id: AnswerKey, value: string | string[]) {
-    const next = { ...answers, [id]: value } as PartialAnswers
+    let next = { ...answers, [id]: value } as PartialAnswers
     // Clear the conditional follow-up when its trigger changes.
     if (id === 'missedCalls' && value === 'almost-none') delete (next as Record<string, unknown>).missedCallsReturned
+    // v1.0.1 fix (audit Part 4 #3): switching industry must not leave the
+    // previous trade's service selections in the answer state. Shared values
+    // that exist in the new industry are kept; unrelated answers untouched.
+    if (id === 'industry' && value !== answers.industry) {
+      next = sanitizeServicesForIndustry(next)
+    }
     setAnswers(next)
     onSave(next)
   }
@@ -105,7 +116,7 @@ export function Quiz({ initialAnswers, onSave, onComplete, onExit }: QuizProps) 
       }
       return
     }
-    onComplete(answers as Answers)
+    onComplete(answers as Answers, allowAi)
   }
 
   const options: QuestionOption[] = resolveOptions(q, answers)
@@ -215,6 +226,52 @@ export function Quiz({ initialAnswers, onSave, onComplete, onExit }: QuizProps) 
           )}
         </div>
 
+        {/* v1.0.1 (audit P0.1/P0.2): accessible privacy notice + meaningful AI
+            choice, shown BEFORE answers are submitted — on the last question
+            screen, directly above the button that triggers submission. */}
+        {index === visible.length - 1 && (
+          <div className="mt-5 space-y-3">
+            <div className="rounded-xl border border-brand-200 bg-white p-5">
+              <p className="flex items-center gap-2 text-sm font-bold text-brand-900">
+                <ShieldCheck className="h-4 w-4 text-brand-600" /> Before your blueprint is built
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink/65">
+                Clicking the button below sends your answers over the internet to the WebThangs server, where the
+                deterministic engine computes your blueprint. Answers are also saved in this browser so you can leave
+                and come back. Nothing about your own customers is collected — the questions ask only for approximate
+                business-level facts. Full details:{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 underline hover:text-brand-800">
+                  Privacy Policy
+                </a>
+                .
+              </p>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-paper p-4">
+                <input
+                  type="checkbox"
+                  checked={allowAi}
+                  onChange={(e) => setAllowAi(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-brand-700"
+                />
+                <span className="text-[13px] leading-relaxed text-ink/70">
+                  <span className="flex items-center gap-1.5 font-semibold text-brand-900">
+                    <Sparkles className="h-3.5 w-3.5 text-brand-500" /> Optionally, let AI write a plain-language
+                    personal summary
+                  </span>
+                  If you tick this, your questionnaire answers will also be processed by Google’s Gemini (via the
+                  WebThangs server) to personalize the narrative text. The blueprint’s recommendations, numbers and
+                  diagrams are identical either way — and the rest of the tool works fully without it.
+                </span>
+              </label>
+              {!allowAi && (
+                <p className="mt-2 text-[11px] leading-relaxed text-ink/45">
+                  AI personalization is off by default: your answers will not be sent to Google Gemini, and your
+                  blueprint will note that the standard (non-AI) edition was generated.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="mt-6 flex items-center justify-between">
           <button onClick={back} className="btn-secondary">
@@ -234,7 +291,12 @@ export function Quiz({ initialAnswers, onSave, onComplete, onExit }: QuizProps) 
         </div>
 
         <p className="mt-5 text-center text-[11px] text-ink/35">
-          Your answers are saved in this browser only — you can close the tab and continue later.
+          Your answers are saved in this browser only until you generate your blueprint — see the privacy notice on the
+          last question, or the{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-brand-700">
+            Privacy Policy
+          </a>
+          .
         </p>
       </div>
     </div>

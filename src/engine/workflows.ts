@@ -74,7 +74,12 @@ function softwareDisplay(w: WorkflowDef, stack: WorkflowStack): string[] {
         names.push(stack.fsm?.name ?? 'Your field-service platform (see Section 7)')
         break
       case 'crm':
-        names.push(stack.crm?.name ?? stack.marketingCrm ? 'Your CRM' : 'Your customer system')
+        // v1.0.1 fix: this was `stack.crm?.name ?? stack.marketingCrm ? A : B`,
+        // which parses as `(stack.crm?.name ?? stack.marketingCrm) ? A : B` —
+        // so a real CRM name could never be displayed. Intended order: the
+        // owner's CRM name, else their field-service platform (which usually
+        // holds the customer records), else a plain description.
+        names.push(stack.crm?.name ?? stack.fsm?.name ?? 'Your customer system')
         break
       case 'automation':
         names.push(stack.automation?.name ?? 'Built-in automations / Make (free tier)')

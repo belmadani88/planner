@@ -1,7 +1,7 @@
 {
   "name": "webthangs-operations-planner",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Free interactive business operations blueprint for home-services companies. Static-first React + Vite frontend, Cloudflare Pages Functions backend, deterministic recommendation engine + optional Gemini personalization.",
   "scripts": {
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/node": "24.19.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

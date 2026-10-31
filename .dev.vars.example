@@ -2,6 +2,7 @@
 # This file contains PLACEHOLDERS ONLY — never real credentials.
 GEMINI_API_KEY=replace-with-your-temporary-test-key
 GEMINI_MODEL=gemini-3.8-flash
-GEMINI_FALLBACK_MODELS=gemini-flash-latest,gemini-2.5-flash
+GEMINI_FALLBACK_MODELS=gemini-flash-latest,gemini-3.6-flash
 CONTACT_EMAIL=hello@your-agency-domain.example
 AI_ENABLED=on
+LEAD_WEBHOOK_URL=

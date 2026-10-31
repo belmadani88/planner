@@ -14,9 +14,14 @@ function optionLabels(questionId: string, answers: Answers): Map<string, string>
   if (!q) return new Map()
   const m = new Map<string, string>()
   if (typeof q.options === 'function') {
-    // Union across industries so any answer resolves.
+    // v1.0.1 fix: resolve against the owner's OWN industry first, so a value
+    // id that several industries share (e.g. 'maintenance') always shows the
+    // label of the industry the owner actually selected. Union the rest as a
+    // fallback so leftover values still resolve instead of showing raw ids.
+    for (const o of resolveOptions(q, { industry: answers.industry })) m.set(o.value, o.label)
     for (const ind of ['hvac', 'plumbing', 'roofing', 'electrical', 'restoration', 'remodeling', 'landscaping'] as const) {
-      for (const o of resolveOptions(q, { industry: ind })) m.set(o.value, o.label)
+      if (ind === answers.industry) continue
+      for (const o of resolveOptions(q, { industry: ind })) if (!m.has(o.value)) m.set(o.value, o.label)
     }
   } else {
     for (const o of q.options) m.set(o.value, o.label)
@@ -25,9 +30,9 @@ function optionLabels(questionId: string, answers: Answers): Map<string, string>
 }
 
 export function labelOf(questionId: keyof Answers, answers: Answers): string | null {
-  const key = questionId as string
+  const key = `${questionId}:${answers.industry ?? 'none'}` as string
   const value = answers[questionId]
-  if (!labelCache.has(key)) labelCache.set(key, optionLabels(key, answers))
+  if (!labelCache.has(key)) labelCache.set(key, optionLabels(questionId, answers))
   const labels = labelCache.get(key)!
   if (Array.isArray(value)) {
     const parts = value.map((v) => labels.get(v) ?? v)
