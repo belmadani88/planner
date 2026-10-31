@@ -1,0 +1,20 @@
+# Cloudflare Pages configuration.
+# Requires wrangler 3.45+ (already a devDependency).
+# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+
+name = "webthangs-operations-planner"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+# ── Optional: consultation-request storage with Cloudflare D1 (free tier) ────
+# 1. Create the database:
+#      npx wrangler d1 create webthangs_consultations
+# 2. Uncomment the block below and paste the database_id from the command output.
+# 3. Apply the schema:
+#      npx wrangler d1 execute webthangs_consultations --file migrations/0001_consultations.sql --remote
+# 4. Add the binding in the Cloudflare dashboard as well (Settings → Bindings → D1).
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "webthangs_consultations"
+# database_id = "paste-your-d1-database-id"
